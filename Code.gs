@@ -16,6 +16,7 @@ const SPREADSHEET_ID = '1AjxwtbRM3mtNMlEu_xxxl8Bb27Le7jyXog7g3z3XM0A';
 // lists if you rename tabs.
 const CUSTOMERS_SHEET_NAMES = ['Customers'];
 const SERVICE_REPORTS_SHEET_NAMES = ['Service Log', 'Service Reports', 'Visits', 'Reports'];
+const CHEMICAL_LOG_SHEET_NAMES = ['Chemical Log', 'Chemical Usage'];
 
 function getSpreadsheet_() {
   return SpreadsheetApp.openById(SPREADSHEET_ID);
@@ -162,28 +163,144 @@ function appendServiceReport_(params) {
     'LSI Score': params.lsi_score || '',
     'Custom Tasks Done': params.tasks_done || '',
     'Tech Notes': params.notes || '',
-    'Next Visit': params.next_visit || '',
     'Photos': params.photos || ''
   };
 
   const row = headers.map(h => (h in valueMap) ? valueMap[h] : '');
   sheet.appendRow(row);
 
-  // Send confirmation email to the customer.
-  if (params.customer_email) {
-    try {
-      MailApp.sendEmail({
-        to: params.customer_email,
-        subject: 'Pool Service Report - ' + (params.service_date || ''),
-        body: 'Hi ' + params.customer_name + ',\n\n' +
-          'Your pool was serviced on ' + (params.service_date || '') + '.\n' +
-          (params.notes ? ('Notes: ' + params.notes + '\n\n') : '\n') +
-          'Next visit: ' + (params.next_visit || 'TBD') + '\n\n' +
-          '- El Dorado Pool Rescue'
-      });
-    } catch (err) {
-      // Don't fail the whole request if email sending fails.
-      console.error('Email send failed: ' + err);
-    }
+  const chemicals = parseJsonSafe_(params.chemicals, []);
+  appendChemicalLog_(params, chemicals);
+
+  const photos = parseJsonSafe_(params.photos_data, []);
+  sendServiceEmail_(params, chemicals, photos);
+}
+
+// ── Chemical Log ───────────────────────────────────────────────
+
+function appendChemicalLog_(params, chemicals) {
+  if (!chemicals.length) return;
+
+  const ss = getSpreadsheet_();
+  const sheet = getSheetByNames_(ss, CHEMICAL_LOG_SHEET_NAMES);
+  if (!sheet) return;
+
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0]
+    .map(h => String(h).trim());
+
+  const serviceDate = params.service_date ? new Date(params.service_date) : new Date();
+  const billedMonth = Utilities.formatDate(serviceDate, Session.getScriptTimeZone(), 'MMMM yyyy');
+
+  chemicals.forEach(chem => {
+    const amount = Number(chem.amount) || 0;
+    const costPerUnit = Number(chem.costPerUnit) || 0;
+    const lineTotal = Math.round(amount * costPerUnit * 100) / 100;
+
+    const valueMap = {
+      'Date': params.service_date || '',
+      'Customer ID': params.customer_id || '',
+      'Customer Name': params.customer_name || '',
+      'Chemical': chem.name || '',
+      'Amount': amount,
+      'Unit': chem.unit || '',
+      'Cost/Unit ($)': costPerUnit,
+      'Line Total ($)': lineTotal,
+      'Billed Month': billedMonth
+    };
+
+    const row = headers.map(h => (h in valueMap) ? valueMap[h] : '');
+    sheet.appendRow(row);
+  });
+}
+
+// ── Email ────────────────────────────────────────────────────
+
+function parseJsonSafe_(text, fallback) {
+  if (!text) return fallback;
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    return fallback;
   }
+}
+
+function sendServiceEmail_(params, chemicals, photos) {
+  if (!params.customer_email) return;
+
+  try {
+    const inlineImages = {};
+    let photosHtml = '';
+
+    photos.forEach((dataUrl, i) => {
+      const match = String(dataUrl).match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+      if (!match) return;
+      const contentType = match[1];
+      const base64Data = match[2];
+      const cid = 'photo' + i;
+      inlineImages[cid] = Utilities.newBlob(Utilities.base64Decode(base64Data), contentType, cid + '.jpg');
+      photosHtml += `<img src="cid:${cid}" style="max-width:280px;border-radius:6px;margin:4px;border:1px solid #ddd;">`;
+    });
+
+    const htmlBody = buildEmailBody_(params, chemicals, photosHtml);
+
+    GmailApp.sendEmail(params.customer_email, 'Pool Service Report - ' + (params.service_date || ''), '', {
+      htmlBody: htmlBody,
+      inlineImages: inlineImages,
+      name: 'El Dorado Pool Rescue'
+    });
+  } catch (err) {
+    // Don't fail the whole request if email sending fails.
+    console.error('Email send failed: ' + err);
+  }
+}
+
+function buildEmailBody_(params, chemicals, photosHtml) {
+  const navy = '#0c1a2c';
+  const gold = '#c8a548';
+
+  const readingsRows = [
+    ['Chlorine (ppm)', params.chlorine],
+    ['pH', params.ph],
+    ['Alkalinity (ppm)', params.alkalinity],
+    ['Calcium (ppm)', params.calcium],
+    ['CYA (ppm)', params.cya],
+    ['Salt (ppm)', params.salt],
+    ['Temp (°F)', params.temp],
+    ['LSI Score', params.lsi_score]
+  ].filter(([, v]) => v !== '' && v !== undefined && v !== null)
+   .map(([label, v]) => `<tr><td style="padding:4px 12px 4px 0;color:#666;">${label}</td><td style="padding:4px 0;font-weight:600;">${v}</td></tr>`)
+   .join('');
+
+  const chemicalsHtml = chemicals.length
+    ? `<h3 style="font-family:'Oswald',sans-serif;color:${navy};font-size:14px;letter-spacing:.05em;text-transform:uppercase;margin:20px 0 8px;">Chemicals Added</h3>
+       <ul style="margin:0;padding-left:20px;color:#333;">
+         ${chemicals.map(c => `<li>${c.name}: ${c.amount} ${c.unit}</li>`).join('')}
+       </ul>`
+    : '';
+
+  return `
+  <div style="font-family:'Inter',Arial,sans-serif;max-width:600px;margin:0 auto;color:#222;">
+    <div style="background:${navy};padding:20px;text-align:center;">
+      <h1 style="font-family:'Oswald',sans-serif;color:${gold};font-size:20px;letter-spacing:.08em;margin:0;">EL DORADO POOL RESCUE</h1>
+      <p style="color:#fff;font-size:12px;letter-spacing:.1em;text-transform:uppercase;margin:4px 0 0;">Service Report</p>
+    </div>
+    <div style="padding:20px;">
+      <p>Hi ${params.customer_name},</p>
+      <p>Your pool was serviced on <strong>${params.service_date || ''}</strong> (${params.visit_type || ''}).</p>
+      <p>Pool condition on arrival: <strong>${params.condition || '—'}</strong></p>
+
+      <h3 style="font-family:'Oswald',sans-serif;color:${navy};font-size:14px;letter-spacing:.05em;text-transform:uppercase;margin:20px 0 8px;">Water Readings</h3>
+      <table style="border-collapse:collapse;font-size:14px;">${readingsRows}</table>
+
+      ${chemicalsHtml}
+
+      ${params.tasks_done ? `<h3 style="font-family:'Oswald',sans-serif;color:${navy};font-size:14px;letter-spacing:.05em;text-transform:uppercase;margin:20px 0 8px;">Tasks Completed</h3><p style="color:#333;">${params.tasks_done}</p>` : ''}
+
+      ${params.notes ? `<h3 style="font-family:'Oswald',sans-serif;color:${navy};font-size:14px;letter-spacing:.05em;text-transform:uppercase;margin:20px 0 8px;">Tech Notes</h3><p style="color:#333;">${params.notes}</p>` : ''}
+
+      ${photosHtml ? `<h3 style="font-family:'Oswald',sans-serif;color:${navy};font-size:14px;letter-spacing:.05em;text-transform:uppercase;margin:20px 0 8px;">Photos</h3><div>${photosHtml}</div>` : ''}
+
+      <p style="margin-top:24px;color:#666;font-size:12px;">Thanks for choosing El Dorado Pool Rescue!</p>
+    </div>
+  </div>`;
 }
