@@ -150,13 +150,20 @@ function generateCustomLink() {
       btn.disabled = false;
       btn.textContent = 'Generate Payment Link';
       if (res.error) { result.innerHTML = `<p class="err">${res.error}</p>`; return; }
-      result.innerHTML = `<a class="btn-link" href="${res.url}" target="_blank">Open Payment Link →</a>`;
+      result.innerHTML = renderInvoiceResult(res, email);
     })
     .catch(() => {
       btn.disabled = false;
       btn.textContent = 'Generate Payment Link';
       result.innerHTML = '<p class="err">Request failed.</p>';
     });
+}
+
+function renderInvoiceResult(res, email) {
+  if (res.emailed) {
+    return `<p style="color:var(--success);font-size:12px;margin-top:10px;">✅ Invoice emailed to ${email}</p>`;
+  }
+  return `<p style="color:var(--danger);font-size:12px;margin-top:10px;">⚠️ Could not email invoice. <a href="${res.url}" target="_blank" style="color:var(--gold);">Open payment link</a> to send manually.</p>`;
 }
 
 function updateTotal(i) {
@@ -200,7 +207,7 @@ function generateLink(i) {
         return;
       }
       btn.style.display = 'none';
-      result.innerHTML = `<a class="btn-link" href="${res.url}" target="_blank">Open Payment Link →</a>`;
+      result.innerHTML = renderInvoiceResult(res, c.email);
     })
     .catch(() => {
       result.innerHTML = '<p class="err">Request failed.</p>';

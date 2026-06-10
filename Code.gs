@@ -357,7 +357,63 @@ function createInvoice_(params) {
 
   logInvoice_(params, billingMonth, amount, paymentLink.url);
 
-  return { url: paymentLink.url };
+  let emailed = false;
+  if (params.customer_email) {
+    emailed = sendInvoiceEmail_(params, billingMonth, amount, paymentLink.url);
+  }
+
+  return { url: paymentLink.url, emailed: emailed };
+}
+
+function sendInvoiceEmail_(params, billingMonth, amount, url) {
+  try {
+    const navy = '#0c1a2c';
+    const gold = '#c8a548';
+
+    const lineItems = [];
+    if (params.service_fee) lineItems.push(['Monthly Service (' + billingMonth + ')', Number(params.service_fee)]);
+    if (params.chemical_total) lineItems.push(['Chemical Charges', Number(params.chemical_total)]);
+    if (params.extra_amount && Number(params.extra_amount) > 0) {
+      lineItems.push([params.extra_description || 'Additional Service', Number(params.extra_amount)]);
+    }
+    if (lineItems.length === 0 && params.extra_description) {
+      lineItems.push([params.extra_description, amount]);
+    }
+
+    const rows = lineItems
+      .map(([label, val]) => `<tr><td style="padding:4px 12px 4px 0;color:#666;">${label}</td><td style="padding:4px 0;text-align:right;">$${Number(val).toFixed(2)}</td></tr>`)
+      .join('');
+
+    const htmlBody = `
+    <div style="font-family:'Inter',Arial,sans-serif;max-width:600px;margin:0 auto;color:#222;">
+      <div style="background:${navy};padding:20px;text-align:center;">
+        <h1 style="font-family:'Oswald',sans-serif;color:${gold};font-size:20px;letter-spacing:.08em;margin:0;">EL DORADO POOL RESCUE</h1>
+        <p style="color:#fff;font-size:12px;letter-spacing:.1em;text-transform:uppercase;margin:4px 0 0;">Invoice</p>
+      </div>
+      <div style="padding:20px;">
+        <p>Hi ${params.customer_name},</p>
+        <p>Here's your invoice${params.customer_id ? ' for ' + billingMonth : ''}:</p>
+        <table style="border-collapse:collapse;font-size:14px;width:100%;margin:12px 0;">
+          ${rows}
+          <tr><td style="padding:8px 12px 4px 0;font-weight:700;border-top:1px solid #ddd;">Total Due</td><td style="padding:8px 0 4px;text-align:right;font-weight:700;border-top:1px solid #ddd;">$${amount.toFixed(2)}</td></tr>
+        </table>
+        <p style="text-align:center;margin:24px 0;">
+          <a href="${url}" style="background:${gold};color:${navy};font-family:'Oswald',sans-serif;font-weight:700;letter-spacing:.05em;text-transform:uppercase;text-decoration:none;padding:14px 28px;border-radius:8px;display:inline-block;">Pay Invoice</a>
+        </p>
+        <p style="color:#666;font-size:12px;">If the button doesn't work, copy and paste this link: <br>${url}</p>
+        <p style="margin-top:24px;color:#666;font-size:12px;">Thanks for choosing El Dorado Pool Rescue!</p>
+      </div>
+    </div>`;
+
+    GmailApp.sendEmail(params.customer_email, 'Invoice from El Dorado Pool Rescue', '', {
+      htmlBody: htmlBody,
+      name: 'El Dorado Pool Rescue'
+    });
+    return true;
+  } catch (err) {
+    console.error('Invoice email failed: ' + err);
+    return false;
+  }
 }
 
 function logInvoice_(params, billingMonth, amount, url) {
