@@ -333,9 +333,15 @@ function createInvoice_(params) {
 
   const amountCents = Math.round(amount * 100);
 
-  let productName = 'Pool Service - ' + customerName + ' - ' + billingMonth;
-  if (params.extra_description) {
-    productName += ' (+ ' + params.extra_description + ')';
+  let productName;
+  if (params.customer_id) {
+    productName = 'Pool Service - ' + customerName + ' - ' + billingMonth;
+    if (params.extra_description) {
+      productName += ' (+ ' + params.extra_description + ')';
+    }
+  } else {
+    // One-time invoice with no recurring customer record.
+    productName = customerName + ' - ' + (params.extra_description || 'Service');
   }
 
   const price = stripeRequest_('prices', {

@@ -33,6 +33,10 @@
     .extra-row{display:flex;gap:8px;margin-top:10px;}
     .extra-desc{flex:2;background:var(--ibg);border:1px solid var(--border);border-radius:6px;color:#fff;font-size:12px;padding:8px;}
     .extra-amt{flex:1;background:var(--ibg);border:1px solid var(--border);border-radius:6px;color:#fff;font-size:12px;padding:8px;text-align:right;}
+    .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+    .lbl{font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);}
+    .field input{background:var(--ibg);border:1px solid var(--border);border-radius:8px;color:#fff;font-family:'Inter',sans-serif;font-size:14px;padding:11px 12px;outline:none;}
+    .field input:focus{border-color:var(--gold);}
   </style>
 </head>
 <body>
@@ -46,6 +50,28 @@
 </header>
 
 <div class="container">
+  <div class="card">
+    <div class="cust-name" style="margin-bottom:12px;">One-Time Invoice</div>
+    <div class="field">
+      <label class="lbl">Customer / Job Name</label>
+      <input type="text" id="customName" placeholder="e.g. Jane Smith">
+    </div>
+    <div class="field">
+      <label class="lbl">Customer Email</label>
+      <input type="email" id="customEmail" placeholder="customer@email.com">
+    </div>
+    <div class="field">
+      <label class="lbl">Description</label>
+      <input type="text" id="customDesc" placeholder="e.g. Green-to-Clean treatment">
+    </div>
+    <div class="field">
+      <label class="lbl">Amount ($)</label>
+      <input type="number" id="customAmount" placeholder="0.00" step="0.01" min="0.01">
+    </div>
+    <button class="btn" id="customBtn" onclick="generateCustomLink()">Generate Payment Link</button>
+    <div id="customResult"></div>
+  </div>
+
   <div class="month-bar">
     <h2 id="monthLabel">Loading...</h2>
   </div>
@@ -92,6 +118,45 @@ function renderList(customers) {
     list.appendChild(card);
     card.dataset.customer = JSON.stringify(c);
   });
+}
+
+function generateCustomLink() {
+  const name = document.getElementById('customName').value.trim();
+  const email = document.getElementById('customEmail').value.trim();
+  const desc = document.getElementById('customDesc').value.trim();
+  const amount = parseFloat(document.getElementById('customAmount').value) || 0;
+  const btn = document.getElementById('customBtn');
+  const result = document.getElementById('customResult');
+
+  if (!name || !desc || amount <= 0) {
+    result.innerHTML = '<p class="err">Please fill in name, description, and an amount greater than $0.</p>';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+  result.innerHTML = '';
+
+  const payload = new FormData();
+  payload.append('action', 'createInvoice');
+  payload.append('customer_name', name);
+  payload.append('customer_email', email);
+  payload.append('extra_description', desc);
+  payload.append('amount', amount);
+
+  fetch(SCRIPT_URL, { method: 'POST', body: payload })
+    .then(r => r.json())
+    .then(res => {
+      btn.disabled = false;
+      btn.textContent = 'Generate Payment Link';
+      if (res.error) { result.innerHTML = `<p class="err">${res.error}</p>`; return; }
+      result.innerHTML = `<a class="btn-link" href="${res.url}" target="_blank">Open Payment Link →</a>`;
+    })
+    .catch(() => {
+      btn.disabled = false;
+      btn.textContent = 'Generate Payment Link';
+      result.innerHTML = '<p class="err">Request failed.</p>';
+    });
 }
 
 function updateTotal(i) {
