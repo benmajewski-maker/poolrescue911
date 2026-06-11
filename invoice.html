@@ -79,15 +79,29 @@
 </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxaVWPxuu1940_MxQFRIDiECjvmC8j1KdSyf4pzWI4iyH4HEy00kgMzeoepeijBSSqMXQ/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxDBmezoezaLn7zp7w5jqjo50sAhHE70B03gwV3hFAHTbQQP9L_dVuGuZ4624yPXLTWjw/exec';
+
+function getPasscode() {
+  return sessionStorage.getItem('edpr_passcode') || '';
+}
 
 window.onload = loadInvoices;
 
 function loadInvoices() {
-  fetch(SCRIPT_URL + '?action=getInvoiceData')
+  let passcode = getPasscode();
+  if (!passcode) {
+    passcode = window.prompt('Enter passcode to access invoicing:') || '';
+    sessionStorage.setItem('edpr_passcode', passcode);
+  }
+
+  fetch(SCRIPT_URL + '?action=getInvoiceData&passcode=' + encodeURIComponent(passcode))
     .then(r => r.json())
     .then(data => {
-      if (data.error) { document.getElementById('list').innerHTML = `<p class="err">${data.error}</p>`; return; }
+      if (data.error) {
+        if (data.error === 'Invalid passcode.') sessionStorage.removeItem('edpr_passcode');
+        document.getElementById('list').innerHTML = `<p class="err">${data.error}</p>`;
+        return;
+      }
       document.getElementById('monthLabel').textContent = data[0] ? data[0].billingMonth : 'This Month';
       renderList(data);
     })
@@ -139,6 +153,7 @@ function generateCustomLink() {
 
   const payload = new FormData();
   payload.append('action', 'createInvoice');
+  payload.append('passcode', getPasscode());
   payload.append('customer_name', name);
   payload.append('customer_email', email);
   payload.append('extra_description', desc);
@@ -149,7 +164,11 @@ function generateCustomLink() {
     .then(res => {
       btn.disabled = false;
       btn.textContent = 'Generate Payment Link';
-      if (res.error) { result.innerHTML = `<p class="err">${res.error}</p>`; return; }
+      if (res.error) {
+        if (res.error === 'Invalid passcode.') sessionStorage.removeItem('edpr_passcode');
+        result.innerHTML = `<p class="err">${res.error}</p>`;
+        return;
+      }
       result.innerHTML = renderInvoiceResult(res, email);
     })
     .catch(() => {
@@ -187,6 +206,7 @@ function generateLink(i) {
 
   const payload = new FormData();
   payload.append('action', 'createInvoice');
+  payload.append('passcode', getPasscode());
   payload.append('customer_id', c.id);
   payload.append('customer_name', c.name);
   payload.append('customer_email', c.email);
