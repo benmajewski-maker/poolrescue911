@@ -53,6 +53,15 @@ function jsonResponse_(data) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+// Checks the supplied passcode against the PASSCODE Script Property.
+// If PASSCODE is not set, the check is skipped (locked-down behavior
+// only kicks in once you set the property).
+function checkPasscode_(passcode) {
+  const expected = PropertiesService.getScriptProperties().getProperty('PASSCODE');
+  if (!expected) return true;
+  return passcode === expected;
+}
+
 function doGet(e) {
   const action = e.parameter.action;
 
@@ -65,6 +74,9 @@ function doGet(e) {
   }
 
   if (action === 'getInvoiceData') {
+    if (!checkPasscode_(e.parameter.passcode)) {
+      return jsonResponse_({ error: 'Invalid passcode.' });
+    }
     return jsonResponse_(getInvoiceData_(e.parameter.month));
   }
 
@@ -75,6 +87,9 @@ function doPost(e) {
   const params = e.parameter;
 
   if (params.action === 'createInvoice') {
+    if (!checkPasscode_(params.passcode)) {
+      return jsonResponse_({ error: 'Invalid passcode.' });
+    }
     return jsonResponse_(createInvoice_(params));
   }
 
