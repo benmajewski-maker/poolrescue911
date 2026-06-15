@@ -495,10 +495,10 @@ function calcDoses() {
     doses.push({name:'Calcium Hardness', rec:`${lbs} lbs`, defaultAmt:lbs, unit:'lbs', costPerUnit:3.10, note:`Ca ${ca} → target 250 ppm`});
   }
 
-  // CYA: 1 lb per 10k gal raises ~7.5 ppm
+  // CYA: 0.83 lb per 10k gal raises 10 ppm (Orenda)
   if(cya < 30) {
     const deficit = 50 - cya;
-    const lbs = Math.round((deficit/7.5)*(gallons/10000)*10)/10;
+    const lbs = Math.round((deficit/10)*0.83*(gallons/10000)*10)/10;
     doses.push({name:'CYA / Stabilizer', rec:`${lbs} lbs`, defaultAmt:lbs, unit:'lbs', costPerUnit:3.50, note:`CYA ${cya} → target 50 ppm`});
   }
 
