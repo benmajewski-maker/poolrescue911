@@ -482,10 +482,9 @@ function calcDoses() {
     const lbs = Math.round((deficit/10)*1.5*(gallons/10000)*10)/10;
     doses.push({name:'Sodium Bicarb — Alk↑', rec:`${lbs} lbs`, defaultAmt:lbs, unit:'lbs', costPerUnit:2.80, note:`Alk ${alk} → target 100 ppm`});
   } else if(alk > 120) {
-    // Lower alk with muriatic acid: aerate after
+    // Lower alk with muriatic acid: 26 fl oz per 10k gal per 10ppm TA decrease
     const excess = alk - 100;
-    const ozPer10kPer02 = 0.034*alk + 3.1;
-    const oz = Math.round((excess/10)*ozPer10kPer02*(gallons/10000)*10)/10;
+    const oz = Math.round((excess/10)*26*(gallons/10000)*10)/10;
     doses.push({name:'Muriatic Acid (31.45%) — Alk↓', rec:`${oz} fl oz`, defaultAmt:oz, unit:'fl oz', costPerUnit:3.20/32, note:'Aerate after to raise pH back up'});
   }
 
