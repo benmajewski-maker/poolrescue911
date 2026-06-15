@@ -596,15 +596,14 @@ function buildTasks() {
 
 // ── PHOTOS ────────────────────────────────────────────────────
 function handlePhotos(e) {
-  const files = Array.from(e.target.files).slice(0,4);
-  photoFiles = files;
-  photoBase64s = [];
+  const availableSlots = 4 - photoFiles.length;
+  const newFiles = Array.from(e.target.files).slice(0, availableSlots);
+  photoFiles = photoFiles.concat(newFiles);
   const preview = document.getElementById('photoPreview');
-  preview.innerHTML='';
-  document.getElementById('photoArea').classList.toggle('has-photos',files.length>0);
-  document.getElementById('photoAreaText').textContent = files.length>0 ? `${files.length} photo${files.length>1?'s':''} selected — tap to change` : 'Tap to add photos (up to 4)';
+  document.getElementById('photoArea').classList.toggle('has-photos',photoFiles.length>0);
+  document.getElementById('photoAreaText').textContent = photoFiles.length>0 ? `${photoFiles.length} photo${photoFiles.length>1?'s':''} selected — tap to add more (up to 4)` : 'Tap to add photos (up to 4)';
 
-  const promises = files.map(f => new Promise(resolve=>{
+  const promises = newFiles.map(f => new Promise(resolve=>{
     const reader = new FileReader();
     reader.onload = ev => {
       compressImage_(ev.target.result, 1280, 0.6).then(dataUrl=>{
@@ -612,6 +611,8 @@ function handlePhotos(e) {
         const img = document.createElement('img');
         img.className='photo-thumb';
         img.src=dataUrl;
+        img.title='Tap to remove';
+        img.onclick=()=>removePhoto_(img);
         preview.appendChild(img);
         resolve();
       });
@@ -619,6 +620,16 @@ function handlePhotos(e) {
     reader.readAsDataURL(f);
   }));
   Promise.all(promises);
+  e.target.value = '';
+}
+
+function removePhoto_(img) {
+  const idx = Array.from(img.parentElement.children).indexOf(img);
+  photoFiles.splice(idx,1);
+  photoBase64s.splice(idx,1);
+  img.remove();
+  document.getElementById('photoArea').classList.toggle('has-photos',photoFiles.length>0);
+  document.getElementById('photoAreaText').textContent = photoFiles.length>0 ? `${photoFiles.length} photo${photoFiles.length>1?'s':''} selected — tap to add more (up to 4)` : 'Tap to add photos (up to 4)';
 }
 
 // Resizes/compresses a photo so uploads stay small on poor cell connections.
