@@ -131,7 +131,7 @@
   <button class="step-btn" onclick="goTo(5)">Submit</button>
 </div>
 
-<form id="reportForm" onsubmit="submitReport(event)">
+<form id="reportForm" onsubmit="submitReport(event)" onkeydown="if(event.key==='Enter' && event.target.type!=='submit'){event.preventDefault();}">
 
 <!-- STEP 0: CUSTOMER -->
 <div class="section active" id="step0">
@@ -438,7 +438,7 @@ function calcDoses() {
   if(!gallons){renderDoses();return;}
 
   // Chlorine — Liquid 12.5% and/or Dichlor granular, per chosen method
-  if(cl < 2) {
+  if(cl < 3) {
     const deficit = 3 - cl;
     const method = chlorineMethod;
 
