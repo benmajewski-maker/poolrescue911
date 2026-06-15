@@ -217,6 +217,14 @@
   <div class="card">
     <div class="card-title">🧪 Recommended Doses</div>
     <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">Based on your readings and pool size. Adjust the <strong style="color:var(--white)">Added</strong> column to what you actually used.</p>
+    <div class="field" style="margin-bottom:14px;">
+      <label class="lbl">Chlorine Method (if low)</label>
+      <div style="display:flex;gap:16px;font-size:13px;">
+        <label><input type="radio" name="chlorineMethod" value="liquid" checked onchange="setChlorineMethod(this.value)"> Liquid</label>
+        <label><input type="radio" name="chlorineMethod" value="dichlor" onchange="setChlorineMethod(this.value)"> Dichlor</label>
+        <label><input type="radio" name="chlorineMethod" value="split" onchange="setChlorineMethod(this.value)"> Both (split)</label>
+      </div>
+    </div>
     <table class="dose-table">
       <thead><tr><th>Chemical</th><th>Recommended</th><th>Added</th></tr></thead>
       <tbody id="doseBody"></tbody>
@@ -303,6 +311,7 @@ let selectedCustomer = null;
 let photoFiles = [];
 let photoBase64s = [];
 let doses = [];
+let chlorineMethod = 'liquid';
 
 const PLAN_TASKS = {
   'Basic':        ['LSI water chemistry check','Equipment inspection','Photo report'],
@@ -428,13 +437,26 @@ function calcDoses() {
   doses = [];
   if(!gallons){renderDoses();return;}
 
-  // Liquid chlorine 12.5% — oz needed to raise 1 ppm per 10k gal ≈ 10 fl oz
+  // Chlorine — Liquid 12.5% and/or Dichlor granular, per chosen method
   if(cl < 2) {
     const deficit = 3 - cl;
-    const ozPer10k = 10;
-    const oz = Math.round((deficit * ozPer10k * gallons/10000)*10)/10;
-    const gal = Math.round((oz/128)*100)/100;
-    doses.push({name:'Liquid Chlorine (12.5%)', rec:`${oz} fl oz (${gal} gal)`, defaultAmt:oz, unit:'fl oz', costPerUnit:4.50/128});
+    const method = chlorineMethod;
+
+    if(method === 'liquid' || method === 'split') {
+      const portion = method === 'split' ? deficit / 2 : deficit;
+      const ozPer10k = 10;
+      const oz = Math.round((portion * ozPer10k * gallons/10000)*10)/10;
+      const gal = Math.round((oz/128)*100)/100;
+      doses.push({name:'Liquid Chlorine (12.5%)', rec:`${oz} fl oz (${gal} gal)`, defaultAmt:oz, unit:'fl oz', costPerUnit:4.50/128});
+    }
+
+    if(method === 'dichlor' || method === 'split') {
+      const portion = method === 'split' ? deficit / 2 : deficit;
+      // Dichlor 56%: ~1.8 oz per 10k gal raises FC ~1 ppm (also raises CYA)
+      const ozPer10k = 1.8;
+      const oz = Math.round((portion * ozPer10k * gallons/10000)*10)/10;
+      doses.push({name:'Dichlor (56%) Granular', rec:`${oz} oz`, defaultAmt:oz, unit:'oz', costPerUnit:5.50/16, note:'Also raises CYA slightly'});
+    }
   }
 
   // pH — Muriatic Acid 31.45% to lower, Sodium Bicarb to raise
@@ -490,6 +512,11 @@ const CHEM_OPTIONS = [
   {name:'CYA / Stabilizer', unit:'lbs', costPerUnit:3.50},
   {name:'Shock — Cal-hypo (73%)', unit:'lbs', costPerUnit:4.00}
 ];
+
+function setChlorineMethod(method) {
+  chlorineMethod = method;
+  calcDoses();
+}
 
 function addManualChem() {
   const opt = CHEM_OPTIONS[0];
@@ -726,7 +753,7 @@ function resetForm() {
   document.getElementById('photoPreview').innerHTML='';
   document.getElementById('prefillNote').style.display='none';
   document.querySelectorAll('.prefilled').forEach(el=>el.classList.remove('prefilled'));
-  photoFiles=[];photoBase64s=[];selectedCustomer=null;doses=[];
+  photoFiles=[];photoBase64s=[];selectedCustomer=null;doses=[];chlorineMethod='liquid';
   document.getElementById('serviceDate').value=new Date().toISOString().split('T')[0];
   goTo(0);
 }
