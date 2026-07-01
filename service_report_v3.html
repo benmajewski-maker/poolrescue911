@@ -769,6 +769,7 @@ function resetForm() {
   document.getElementById('prefillNote').style.display='none';
   document.querySelectorAll('.prefilled').forEach(el=>el.classList.remove('prefilled'));
   photoFiles=[];photoBase64s=[];selectedCustomer=null;doses=[];chlorineMethod='liquid';
+  document.getElementById('submitBtn').disabled=false;
   document.getElementById('serviceDate').value=new Date().toISOString().split('T')[0];
   goTo(0);
 }
