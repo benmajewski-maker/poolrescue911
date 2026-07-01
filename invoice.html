@@ -74,6 +74,7 @@
 
   <div class="month-bar">
     <h2 id="monthLabel">Loading...</h2>
+    <select id="monthPicker" onchange="loadInvoices()" style="background:var(--ibg);border:1px solid var(--border);border-radius:6px;color:#fff;font-family:'Oswald',sans-serif;font-size:13px;padding:6px 10px;cursor:pointer;"></select>
   </div>
   <div id="list" class="loading">Loading invoice data...</div>
 </div>
@@ -85,7 +86,26 @@ function getPasscode() {
   return sessionStorage.getItem('edpr_passcode') || '';
 }
 
-window.onload = loadInvoices;
+window.onload = () => { buildMonthPicker(); loadInvoices(); };
+
+function buildMonthPicker() {
+  const picker = document.getElementById('monthPicker');
+  const now = new Date();
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  // Show current month + 5 months back
+  for (let i = 0; i <= 5; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const label = months[d.getMonth()] + ' ' + d.getFullYear();
+    const opt = document.createElement('option');
+    opt.value = label;
+    opt.textContent = label;
+    picker.appendChild(opt);
+  }
+}
+
+function getSelectedMonth() {
+  return document.getElementById('monthPicker').value;
+}
 
 function loadInvoices() {
   let passcode = getPasscode();
@@ -94,7 +114,11 @@ function loadInvoices() {
     sessionStorage.setItem('edpr_passcode', passcode);
   }
 
-  fetch(SCRIPT_URL + '?action=getInvoiceData&passcode=' + encodeURIComponent(passcode))
+  const month = getSelectedMonth();
+  document.getElementById('list').className = 'loading';
+  document.getElementById('list').innerHTML = 'Loading invoice data...';
+
+  fetch(SCRIPT_URL + '?action=getInvoiceData&passcode=' + encodeURIComponent(passcode) + '&month=' + encodeURIComponent(month))
     .then(r => r.json())
     .then(data => {
       if (data.error) {
@@ -102,7 +126,7 @@ function loadInvoices() {
         document.getElementById('list').innerHTML = `<p class="err">${data.error}</p>`;
         return;
       }
-      document.getElementById('monthLabel').textContent = data[0] ? data[0].billingMonth : 'This Month';
+      document.getElementById('monthLabel').textContent = month;
       renderList(data);
     })
     .catch(() => { document.getElementById('list').innerHTML = '<p class="err">Could not load invoice data.</p>'; });
