@@ -210,14 +210,14 @@ function renderInvoiceResult(res, email) {
 }
 
 function updateTotal(i) {
-  const card = document.querySelectorAll('.card')[i];
+  const card = document.querySelectorAll('#list .card')[i];
   const c = JSON.parse(card.dataset.customer);
   const extra = parseFloat(document.getElementById('extraAmt_' + i).value) || 0;
   document.getElementById('totalDisplay_' + i).textContent = '$' + (c.total + extra).toFixed(2);
 }
 
 function generateLink(i) {
-  const card = document.querySelectorAll('.card')[i];
+  const card = document.querySelectorAll('#list .card')[i];
   const c = JSON.parse(card.dataset.customer);
   const btn = document.getElementById('btn_' + i);
   const result = document.getElementById('result_' + i);
