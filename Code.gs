@@ -213,7 +213,8 @@ function appendChemicalLog_(params, chemicals) {
     .map(h => String(h).trim());
 
   const serviceDate = params.service_date ? new Date(params.service_date) : new Date();
-  const billedMonth = Utilities.formatDate(serviceDate, Session.getScriptTimeZone(), 'MMMM yyyy');
+  const nextMonth = new Date(serviceDate.getFullYear(), serviceDate.getMonth() + 1, 1);
+  const billedMonth = Utilities.formatDate(nextMonth, Session.getScriptTimeZone(), 'MMMM yyyy');
 
   chemicals.forEach(chem => {
     const amount = Number(chem.amount) || 0;
@@ -280,6 +281,15 @@ function sendServiceEmail_(params, chemicals, photos) {
 
 // ── Invoicing / Stripe ───────────────────────────────────────
 
+// Sheets auto-converts month strings like "June 2026" into Date objects.
+// This normalizes either a Date or a string to "MMMM yyyy" for comparison.
+function formatBilledMonth_(val) {
+  if (val instanceof Date) {
+    return Utilities.formatDate(val, Session.getScriptTimeZone(), 'MMMM yyyy');
+  }
+  return String(val).trim();
+}
+
 function getCurrentBillingMonth_() {
   return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MMMM yyyy');
 }
@@ -298,7 +308,7 @@ function getInvoiceData_(month) {
   return customers.map(c => {
     const chemicalTotal = chemRows
       .filter(r => String(r['Customer ID']).trim() === String(c.id).trim()
-                 && String(r['Billed Month']).trim() === billingMonth)
+                 && formatBilledMonth_(r['Billed Month']) === billingMonth)
       .reduce((sum, r) => sum + (Number(r['Line Total ($)']) || 0), 0);
 
     return {
