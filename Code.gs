@@ -271,7 +271,8 @@ function sendServiceEmail_(params, chemicals, photos) {
     GmailApp.sendEmail(params.customer_email, 'Pool Service Report - ' + (params.service_date || ''), '', {
       htmlBody: htmlBody,
       inlineImages: inlineImages,
-      name: 'El Dorado Pool Rescue'
+      name: 'El Dorado Pool Rescue',
+      from: 'help@poolrescue911.net'
     });
   } catch (err) {
     // Don't fail the whole request if email sending fails.
@@ -432,7 +433,8 @@ function sendInvoiceEmail_(params, billingMonth, amount, url) {
 
     GmailApp.sendEmail(params.customer_email, 'Invoice from El Dorado Pool Rescue', '', {
       htmlBody: htmlBody,
-      name: 'El Dorado Pool Rescue'
+      name: 'El Dorado Pool Rescue',
+      from: 'help@poolrescue911.net'
     });
     return true;
   } catch (err) {
