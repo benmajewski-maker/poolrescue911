@@ -213,7 +213,8 @@ function appendChemicalLog_(params, chemicals) {
     .map(h => String(h).trim());
 
   const serviceDate = params.service_date ? new Date(params.service_date) : new Date();
-  const billedMonth = Utilities.formatDate(serviceDate, Session.getScriptTimeZone(), 'MMMM yyyy');
+  const nextMonth = new Date(serviceDate.getFullYear(), serviceDate.getMonth() + 1, 1);
+  const billedMonth = Utilities.formatDate(nextMonth, Session.getScriptTimeZone(), 'MMMM yyyy');
 
   chemicals.forEach(chem => {
     const amount = Number(chem.amount) || 0;
