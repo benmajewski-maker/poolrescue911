@@ -281,6 +281,15 @@ function sendServiceEmail_(params, chemicals, photos) {
 
 // ── Invoicing / Stripe ───────────────────────────────────────
 
+// Sheets auto-converts month strings like "June 2026" into Date objects.
+// This normalizes either a Date or a string to "MMMM yyyy" for comparison.
+function formatBilledMonth_(val) {
+  if (val instanceof Date) {
+    return Utilities.formatDate(val, Session.getScriptTimeZone(), 'MMMM yyyy');
+  }
+  return String(val).trim();
+}
+
 function getCurrentBillingMonth_() {
   return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'MMMM yyyy');
 }
@@ -299,7 +308,7 @@ function getInvoiceData_(month) {
   return customers.map(c => {
     const chemicalTotal = chemRows
       .filter(r => String(r['Customer ID']).trim() === String(c.id).trim()
-                 && String(r['Billed Month']).trim() === billingMonth)
+                 && formatBilledMonth_(r['Billed Month']) === billingMonth)
       .reduce((sum, r) => sum + (Number(r['Line Total ($)']) || 0), 0);
 
     return {
