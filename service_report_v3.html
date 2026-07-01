@@ -105,6 +105,11 @@
     .loading-overlay p{color:var(--muted);font-size:14px;}
     .info-note{background:rgba(91,176,204,.08);border:1px solid rgba(91,176,204,.2);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--blue);margin-bottom:14px;line-height:1.5;}
     .shock-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;}
+    .range-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;padding:2px 7px;border-radius:20px;margin-left:6px;vertical-align:middle;opacity:0;transition:opacity .2s;}
+    .range-badge.show{opacity:1;}
+    .range-badge.ok{background:rgba(76,175,125,.18);color:var(--success);}
+    .range-badge.high{background:rgba(207,68,68,.18);color:var(--danger);}
+    .range-badge.low{background:rgba(232,160,32,.18);color:var(--warn);}
   </style>
 </head>
 <body>
@@ -131,7 +136,7 @@
   <button class="step-btn" onclick="goTo(5)">Submit</button>
 </div>
 
-<form id="reportForm" onsubmit="submitReport(event)">
+<form id="reportForm" onsubmit="submitReport(event)" onkeydown="if(event.key==='Enter' && event.target.type!=='submit'){event.preventDefault();}">
 
 <!-- STEP 0: CUSTOMER -->
 <div class="section active" id="step0">
@@ -169,32 +174,32 @@
     <div class="card-title">💧 Water Readings</div>
     <div class="reading-grid">
       <div class="reading-item field">
-        <label class="lbl">Chlorine (ppm)</label>
-        <input type="number" id="r_chlorine" step="0.1" min="0" max="10" placeholder="—" inputmode="decimal"/>
+        <label class="lbl">Chlorine (ppm)<span class="range-badge" id="badge_chlorine"></span></label>
+        <input type="number" id="r_chlorine" step="0.1" min="0" max="10" placeholder="—" inputmode="decimal" oninput="updateBadge('chlorine',this.value)"/>
       </div>
       <div class="reading-item field">
-        <label class="lbl">pH</label>
-        <input type="number" id="r_ph" step="0.1" min="6.0" max="9.0" placeholder="—" inputmode="decimal"/>
+        <label class="lbl">pH<span class="range-badge" id="badge_ph"></span></label>
+        <input type="number" id="r_ph" step="0.1" min="6.0" max="9.0" placeholder="—" inputmode="decimal" oninput="updateBadge('ph',this.value)"/>
       </div>
       <div class="reading-item field">
-        <label class="lbl">Alkalinity (ppm)</label>
-        <input type="number" id="r_alk" step="1" min="0" max="500" placeholder="—" inputmode="numeric"/>
+        <label class="lbl">Alkalinity (ppm)<span class="range-badge" id="badge_alk"></span></label>
+        <input type="number" id="r_alk" step="1" min="0" max="500" placeholder="—" inputmode="numeric" oninput="updateBadge('alk',this.value)"/>
       </div>
       <div class="reading-item field">
-        <label class="lbl">Calcium (ppm)</label>
-        <input type="number" id="r_calcium" step="1" min="0" max="1000" placeholder="—" inputmode="numeric"/>
+        <label class="lbl">Calcium (ppm)<span class="range-badge" id="badge_calcium"></span></label>
+        <input type="number" id="r_calcium" step="1" min="0" max="1000" placeholder="—" inputmode="numeric" oninput="updateBadge('calcium',this.value)"/>
       </div>
       <div class="reading-item field">
-        <label class="lbl">CYA (ppm)</label>
-        <input type="number" id="r_cya" step="1" min="0" max="200" placeholder="—" inputmode="numeric"/>
+        <label class="lbl">CYA (ppm)<span class="range-badge" id="badge_cya"></span></label>
+        <input type="number" id="r_cya" step="1" min="0" max="200" placeholder="—" inputmode="numeric" oninput="updateBadge('cya',this.value)"/>
       </div>
       <div class="reading-item field">
-        <label class="lbl">Salt (ppm)</label>
-        <input type="number" id="r_salt" step="10" min="0" max="5000" placeholder="—" inputmode="numeric"/>
+        <label class="lbl">Salt (ppm)<span class="range-badge" id="badge_salt"></span></label>
+        <input type="number" id="r_salt" step="10" min="0" max="5000" placeholder="—" inputmode="numeric" oninput="updateBadge('salt',this.value)"/>
       </div>
       <div class="reading-item field">
-        <label class="lbl">Temp (°F)</label>
-        <input type="number" id="r_temp" step="1" min="32" max="110" placeholder="—" inputmode="numeric"/>
+        <label class="lbl">Temp (°F)<span class="range-badge" id="badge_temp"></span></label>
+        <input type="number" id="r_temp" step="1" min="32" max="110" placeholder="—" inputmode="numeric" oninput="updateBadge('temp',this.value)"/>
       </div>
     </div>
   </div>
@@ -217,10 +222,19 @@
   <div class="card">
     <div class="card-title">🧪 Recommended Doses</div>
     <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">Based on your readings and pool size. Adjust the <strong style="color:var(--white)">Added</strong> column to what you actually used.</p>
+    <div class="field" style="margin-bottom:14px;">
+      <label class="lbl">Chlorine Method (if low)</label>
+      <div style="display:flex;gap:16px;font-size:13px;">
+        <label><input type="radio" name="chlorineMethod" value="liquid" checked onchange="setChlorineMethod(this.value)"> Liquid</label>
+        <label><input type="radio" name="chlorineMethod" value="dichlor" onchange="setChlorineMethod(this.value)"> Dichlor</label>
+        <label><input type="radio" name="chlorineMethod" value="split" onchange="setChlorineMethod(this.value)"> Both (split)</label>
+      </div>
+    </div>
     <table class="dose-table">
       <thead><tr><th>Chemical</th><th>Recommended</th><th>Added</th></tr></thead>
       <tbody id="doseBody"></tbody>
     </table>
+    <button type="button" class="btn btn-back" style="margin-top:12px;" onclick="addManualChem()">+ Add Chemical</button>
   </div>
   <div class="nav-bar">
     <button type="button" class="btn btn-back" onclick="goTo(1)">← Back</button>
@@ -294,7 +308,7 @@
 </div>
 
 <script>
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxDBmezoezaLn7zp7w5jqjo50sAhHE70B03gwV3hFAHTbQQP9L_dVuGuZ4624yPXLTWjw/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzykkds2D6z2FSi3ePO1_IynoEoOVDguJPhhsYneT446SCp2zcCt76IB2L4gHpBJCs/exec';
 
 let currentStep = 0;
 let customers = [];
@@ -302,6 +316,7 @@ let selectedCustomer = null;
 let photoFiles = [];
 let photoBase64s = [];
 let doses = [];
+let chlorineMethod = 'liquid';
 
 const PLAN_TASKS = {
   'Basic':        ['LSI water chemistry check','Equipment inspection','Photo report'],
@@ -427,20 +442,37 @@ function calcDoses() {
   doses = [];
   if(!gallons){renderDoses();return;}
 
-  // Liquid chlorine 12.5% — oz needed to raise 1 ppm per 10k gal ≈ 10 fl oz
-  if(cl < 2) {
+  // Chlorine — Liquid 12.5% and/or Dichlor granular, per chosen method
+  if(cl < 3) {
     const deficit = 3 - cl;
-    const ozPer10k = 10;
-    const oz = Math.round((deficit * ozPer10k * gallons/10000)*10)/10;
-    const gal = Math.round((oz/128)*100)/100;
-    doses.push({name:'Liquid Chlorine (12.5%)', rec:`${oz} fl oz (${gal} gal)`, defaultAmt:oz, unit:'fl oz', costPerUnit:4.50/128});
+    const method = chlorineMethod;
+
+    if(method === 'liquid' || method === 'split') {
+      const portion = method === 'split' ? deficit / 2 : deficit;
+      const ozPer10k = 10;
+      const oz = Math.round((portion * ozPer10k * gallons/10000)*10)/10;
+      const gal = Math.round((oz/128)*100)/100;
+      doses.push({name:'Liquid Chlorine (12.5%)', rec:`${oz} fl oz (${gal} gal)`, defaultAmt:oz, unit:'fl oz', costPerUnit:4.50/128});
+    }
+
+    if(method === 'dichlor' || method === 'split') {
+      const portion = method === 'split' ? deficit / 2 : deficit;
+      // Dichlor 56%: ~1.8 oz per 10k gal raises FC ~1 ppm (also raises CYA)
+      const ozPer10k = 1.8;
+      const oz = Math.round((portion * ozPer10k * gallons/10000)*10)/10;
+      doses.push({name:'Dichlor (56%) Granular', rec:`${oz} oz`, defaultAmt:oz, unit:'oz', costPerUnit:5.50/16, note:'Also raises CYA slightly'});
+    }
   }
 
   // pH — Muriatic Acid 31.45% to lower, Sodium Bicarb to raise
   if(ph > 7.6) {
-    // Muriatic acid 31.45%: ~26 fl oz per 10k gal to drop pH 0.2
+    // Muriatic acid 31.45%: oz per 10k gal per 0.2 pH drop scales with
+    // alkalinity (more buffering capacity = more acid needed). Calibrated
+    // against Skimmer's LSI calculator: ~6.5 oz/10k/0.2pH at TA 100,
+    // ~10 oz/10k/0.2pH at TA 205.
     const drop = ph - 7.4;
-    const oz = Math.round((drop/0.2)*26*(gallons/10000)*10)/10;
+    const ozPer10kPer02 = 0.034*alk + 3.1;
+    const oz = Math.round((drop/0.2)*ozPer10kPer02*(gallons/10000)*10)/10;
     doses.push({name:'Muriatic Acid (31.45%) — pH↓', rec:`${oz} fl oz`, defaultAmt:oz, unit:'fl oz', costPerUnit:3.20/32, note:`pH ${ph} → target 7.4`});
   } else if(ph < 7.2) {
     // Sodium bicarb: ~1.4 lbs per 10k gal raises pH ~0.2 (also raises alk ~10 ppm)
@@ -455,7 +487,7 @@ function calcDoses() {
     const lbs = Math.round((deficit/10)*1.5*(gallons/10000)*10)/10;
     doses.push({name:'Sodium Bicarb — Alk↑', rec:`${lbs} lbs`, defaultAmt:lbs, unit:'lbs', costPerUnit:2.80, note:`Alk ${alk} → target 100 ppm`});
   } else if(alk > 120) {
-    // Lower alk with muriatic acid: aerate after
+    // Lower alk with muriatic acid: 26 fl oz per 10k gal per 10ppm TA decrease
     const excess = alk - 100;
     const oz = Math.round((excess/10)*26*(gallons/10000)*10)/10;
     doses.push({name:'Muriatic Acid (31.45%) — Alk↓', rec:`${oz} fl oz`, defaultAmt:oz, unit:'fl oz', costPerUnit:3.20/32, note:'Aerate after to raise pH back up'});
@@ -468,23 +500,75 @@ function calcDoses() {
     doses.push({name:'Calcium Hardness', rec:`${lbs} lbs`, defaultAmt:lbs, unit:'lbs', costPerUnit:3.10, note:`Ca ${ca} → target 250 ppm`});
   }
 
-  // CYA: 1 lb per 10k gal raises ~7.5 ppm
+  // CYA: 0.83 lb per 10k gal raises 10 ppm (Orenda)
   if(cya < 30) {
     const deficit = 50 - cya;
-    const lbs = Math.round((deficit/7.5)*(gallons/10000)*10)/10;
+    const lbs = Math.round((deficit/10)*0.83*(gallons/10000)*10)/10;
     doses.push({name:'CYA / Stabilizer', rec:`${lbs} lbs`, defaultAmt:lbs, unit:'lbs', costPerUnit:3.50, note:`CYA ${cya} → target 50 ppm`});
-  }
-
-  // Shock — Cal-hypo 73%: 1 lb per 10k gal raises ~7 ppm chlorine
-  // Only suggest if chlorine very low
-  if(cl < 1) {
-    const lbs = Math.round(1*(gallons/10000)*10)/10;
-    doses.push({name:'Shock — Cal-hypo (73%)', rec:`${lbs} lbs`, defaultAmt:lbs, unit:'lbs', costPerUnit:4.00, note:'For severely low chlorine — add at dusk'});
   }
 
   if(doses.length===0) {
     doses.push({name:'All parameters in range',rec:'—',noAction:true});
   }
+  renderDoses();
+}
+
+const CHEM_OPTIONS = [
+  {name:'Liquid Chlorine (12.5%)', unit:'fl oz', costPerUnit:4.50/128},
+  {name:'Muriatic Acid (31.45%)', unit:'fl oz', costPerUnit:3.20/32},
+  {name:'Sodium Bicarb', unit:'lbs', costPerUnit:2.80},
+  {name:'Calcium Hardness', unit:'lbs', costPerUnit:3.10},
+  {name:'CYA / Stabilizer', unit:'lbs', costPerUnit:3.50},
+  {name:'Shock — Cal-hypo (73%)', unit:'lbs', costPerUnit:4.00}
+];
+
+const RANGES = {
+  chlorine: { low: [0, 2],    ok: [2, 5],    high: [5, 99],  labels: ['Low','Good','High'] },
+  ph:       { low: [0, 7.4],  ok: [7.4, 7.6],high: [7.6, 9], labels: ['Low','Good','High'] },
+  alk:      { low: [0, 80],   ok: [80, 120],  high: [120, 999],labels: ['Low','Good','High'] },
+  calcium:  { low: [0, 200],  ok: [200, 400], high: [400, 9999],labels: ['Low','Good','High'] },
+  cya:      { low: [0, 30],   ok: [30, 60],   high: [60, 999], labels: ['Low','Good','High'] },
+  salt:     { low: [0, 2700], ok: [2700, 3400],high: [3400, 9999],labels: ['Low','Good','High'] },
+  temp:     { low: [0, 60],   ok: [60, 90],   high: [90, 999], labels: ['Low','Good','High'] },
+};
+
+function updateBadge(key, val) {
+  const badge = document.getElementById('badge_' + key);
+  if (!badge) return;
+  const v = parseFloat(val);
+  if (isNaN(v) || val === '') { badge.className = 'range-badge'; return; }
+  const r = RANGES[key];
+  let cls, txt;
+  if (v >= r.ok[0] && v <= r.ok[1]) { cls = 'ok'; txt = r.labels[1]; }
+  else if (v < r.ok[0])              { cls = 'low'; txt = r.labels[0]; }
+  else                               { cls = 'high'; txt = r.labels[2]; }
+  badge.className = 'range-badge show ' + cls;
+  badge.textContent = txt;
+}
+
+function setChlorineMethod(method) {
+  chlorineMethod = method;
+  calcDoses();
+}
+
+function addManualChem() {
+  const opt = CHEM_OPTIONS[0];
+  doses = doses.filter(d=>!d.noAction);
+  doses.push({name:opt.name, rec:'Manual', defaultAmt:0, unit:opt.unit, costPerUnit:opt.costPerUnit, manual:true});
+  renderDoses();
+}
+
+function updateManualChem(i) {
+  const select = document.getElementById('dosename_'+i);
+  const opt = CHEM_OPTIONS.find(c=>c.name===select.value);
+  doses[i].name = opt.name;
+  doses[i].unit = opt.unit;
+  doses[i].costPerUnit = opt.costPerUnit;
+}
+
+function removeManualChem(i) {
+  doses.splice(i,1);
+  if(doses.length===0) doses.push({name:'All parameters in range',rec:'—',noAction:true});
   renderDoses();
 }
 
@@ -495,6 +579,17 @@ function renderDoses() {
     const tr = document.createElement('tr');
     if(d.noAction) {
       tr.innerHTML=`<td colspan="3" class="dose-none">✅ No chemical additions needed</td>`;
+    } else if(d.manual) {
+      tr.innerHTML=`
+        <td>
+          <select class="dose-input" id="dosename_${i}" onchange="updateManualChem(${i})">
+            ${CHEM_OPTIONS.map(c=>`<option value="${c.name}" ${c.name===d.name?'selected':''}>${c.name}</option>`).join('')}
+          </select>
+        </td>
+        <td class="dose-add">
+          Manual <a href="#" onclick="removeManualChem(${i});return false;" style="color:var(--muted);">✕</a>
+        </td>
+        <td><input type="number" step="0.1" min="0" class="dose-input" id="dose_${i}" value="${d.defaultAmt||0}"/></td>`;
     } else {
       tr.innerHTML=`
         <td>
@@ -530,28 +625,63 @@ function buildTasks() {
 
 // ── PHOTOS ────────────────────────────────────────────────────
 function handlePhotos(e) {
-  const files = Array.from(e.target.files).slice(0,4);
-  photoFiles = files;
-  photoBase64s = [];
+  const availableSlots = 4 - photoFiles.length;
+  const newFiles = Array.from(e.target.files).slice(0, availableSlots);
+  photoFiles = photoFiles.concat(newFiles);
   const preview = document.getElementById('photoPreview');
-  preview.innerHTML='';
-  document.getElementById('photoArea').classList.toggle('has-photos',files.length>0);
-  document.getElementById('photoAreaText').textContent = files.length>0 ? `${files.length} photo${files.length>1?'s':''} selected — tap to change` : 'Tap to add photos (up to 4)';
+  document.getElementById('photoArea').classList.toggle('has-photos',photoFiles.length>0);
+  document.getElementById('photoAreaText').textContent = photoFiles.length>0 ? `${photoFiles.length} photo${photoFiles.length>1?'s':''} selected — tap to add more (up to 4)` : 'Tap to add photos (up to 4)';
 
-  const promises = files.map(f => new Promise(resolve=>{
+  const promises = newFiles.map(f => new Promise(resolve=>{
     const reader = new FileReader();
     reader.onload = ev => {
-      photoBase64s.push(ev.target.result); // full data URL
-      const img = document.createElement('img');
-      img.className='photo-thumb';
-      img.src=ev.target.result;
-      preview.appendChild(img);
-      resolve();
+      compressImage_(ev.target.result, 1280, 0.6).then(dataUrl=>{
+        photoBase64s.push(dataUrl);
+        const img = document.createElement('img');
+        img.className='photo-thumb';
+        img.src=dataUrl;
+        img.title='Tap to remove';
+        img.onclick=()=>removePhoto_(img);
+        preview.appendChild(img);
+        resolve();
+      });
     };
     reader.readAsDataURL(f);
   }));
   Promise.all(promises);
+  e.target.value = '';
 }
+
+function removePhoto_(img) {
+  const idx = Array.from(img.parentElement.children).indexOf(img);
+  photoFiles.splice(idx,1);
+  photoBase64s.splice(idx,1);
+  img.remove();
+  document.getElementById('photoArea').classList.toggle('has-photos',photoFiles.length>0);
+  document.getElementById('photoAreaText').textContent = photoFiles.length>0 ? `${photoFiles.length} photo${photoFiles.length>1?'s':''} selected — tap to add more (up to 4)` : 'Tap to add photos (up to 4)';
+}
+
+// Resizes/compresses a photo so uploads stay small on poor cell connections.
+function compressImage_(dataUrl, maxDim, quality) {
+  return new Promise(resolve=>{
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
+        else { width = Math.round(width * maxDim / height); height = maxDim; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 
 // ── REVIEW ────────────────────────────────────────────────────
 function buildReview() {
@@ -637,9 +767,13 @@ function submitReport(e) {
   payload.append('photos',         photoBase64s.length+' photos attached');
   payload.append('photos_data',    JSON.stringify(photoBase64s));
 
-  fetch(SCRIPT_URL,{method:'POST',body:payload})
+  const controller = new AbortController();
+  const timeoutId = setTimeout(()=>controller.abort(), 45000);
+
+  fetch(SCRIPT_URL,{method:'POST',body:payload,signal:controller.signal})
     .then(r=>r.json())
     .then(()=>{
+      clearTimeout(timeoutId);
       hideLoading();
       document.getElementById('reportForm').style.display='none';
       document.getElementById('stepNav').style.display='none';
@@ -647,11 +781,10 @@ function submitReport(e) {
       document.getElementById('successScreen').classList.add('show');
     })
     .catch(()=>{
+      clearTimeout(timeoutId);
       hideLoading();
-      document.getElementById('reportForm').style.display='none';
-      document.getElementById('stepNav').style.display='none';
-      document.getElementById('successScreen').classList.add('show');
-      document.getElementById('successMsg').textContent=`Report submitted for ${selectedCustomer.name}.`;
+      document.getElementById('submitBtn').disabled=false;
+      alert('Report could not be sent — check your connection and tap Send again.');
     });
 }
 
@@ -664,7 +797,8 @@ function resetForm() {
   document.getElementById('photoPreview').innerHTML='';
   document.getElementById('prefillNote').style.display='none';
   document.querySelectorAll('.prefilled').forEach(el=>el.classList.remove('prefilled'));
-  photoFiles=[];photoBase64s=[];selectedCustomer=null;doses=[];
+  photoFiles=[];photoBase64s=[];selectedCustomer=null;doses=[];chlorineMethod='liquid';
+  document.getElementById('submitBtn').disabled=false;
   document.getElementById('serviceDate').value=new Date().toISOString().split('T')[0];
   goTo(0);
 }
