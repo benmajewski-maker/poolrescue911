@@ -136,7 +136,7 @@
   <button class="step-btn" onclick="goTo(5)">Submit</button>
 </div>
 
-<form id="reportForm" onsubmit="submitReport(event)" onkeydown="if(event.key==='Enter' && event.target.type!=='submit'){event.preventDefault();}">
+<form id="reportForm" onsubmit="submitReport(event)" onkeydown="if(event.key==='Enter' && event.target.type!=='submit'){event.preventDefault();}" novalidate>
 
 <!-- STEP 0: CUSTOMER -->
 <div class="section active" id="step0">
@@ -144,7 +144,7 @@
     <div class="card-title">📋 Customer & Visit</div>
     <div class="field">
       <label class="lbl">Select Customer</label>
-      <select id="customerSelect" onchange="loadCustomer()" required>
+      <select id="customerSelect" onchange="loadCustomer()">
         <option value="">Loading customers...</option>
       </select>
     </div>
@@ -159,7 +159,7 @@
     <div class="field">
       <label class="lbl">Visit Type</label>
       <div class="pill-row">
-        <label class="pill"><input type="radio" name="visitType" value="Full Test" required/><span class="pill-lbl">🧪 Full Test</span></label>
+        <label class="pill"><input type="radio" name="visitType" value="Full Test"/><span class="pill-lbl">🧪 Full Test</span></label>
         <label class="pill"><input type="radio" name="visitType" value="Basic Visit"/><span class="pill-lbl">⚡ Basic Visit</span></label>
       </div>
     </div>
