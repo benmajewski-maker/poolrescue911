@@ -827,11 +827,16 @@ function submitReport(e) {
       document.getElementById('successMsg').textContent=`Report logged and email sent to ${selectedCustomer.email}.`;
       document.getElementById('successScreen').classList.add('show');
     })
-    .catch(()=>{
+    .catch(err=>{
       clearTimeout(timeoutId);
       hideLoading();
-      document.getElementById('submitBtn').disabled=false;
-      alert('Report could not be sent — check your connection and tap Send again.');
+      if (err && err.name === 'AbortError') {
+        // Timeout — report may have already been logged. Don't re-enable button.
+        alert('Taking longer than expected — your report was likely saved. Check the sheet before resubmitting to avoid duplicates.');
+      } else {
+        document.getElementById('submitBtn').disabled=false;
+        alert('Report could not be sent — check your connection and tap Send again.');
+      }
     });
 }
 
