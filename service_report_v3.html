@@ -170,6 +170,9 @@
 <!-- STEP 1: READINGS -->
 <div class="section" id="step1">
   <div class="info-note" id="prefillNote" style="display:none;">🔵 Blue fields loaded from last visit — update if changed today.</div>
+  <div id="nextVisitReminder" style="display:none;background:rgba(200,165,72,.1);border:1px solid rgba(200,165,72,.4);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--gold);margin-bottom:14px;line-height:1.6;">
+    <strong>⚠️ From last visit:</strong> <span id="nextVisitReminderText"></span>
+  </div>
   <div class="card">
     <div class="card-title">💧 Water Readings</div>
     <div class="reading-grid">
@@ -268,6 +271,26 @@
   <div class="card">
     <div class="card-title">📝 Tech Notes</div>
     <textarea id="techNotes" placeholder="Water clarity, equipment observations, recommendations..."></textarea>
+  </div>
+  <div class="card">
+    <div class="card-title">🔜 Next Visit Needs</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Check anything to bring or do next visit.</p>
+    <div id="nextVisitChecks" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer;"><input type="checkbox" id="nv_tabs" style="width:18px;height:18px;accent-color:var(--gold);"> Tabs</label>
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer;"><input type="checkbox" id="nv_cya" style="width:18px;height:18px;accent-color:var(--gold);"> CYA (Stabilizer)</label>
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer;"><input type="checkbox" id="nv_bicarb" style="width:18px;height:18px;accent-color:var(--gold);"> Bicarb (Alkalinity Up)</label>
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer;"><input type="checkbox" id="nv_calcium" style="width:18px;height:18px;accent-color:var(--gold);"> Calcium</label>
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer;"><input type="checkbox" id="nv_salt" style="width:18px;height:18px;accent-color:var(--gold);"> Salt</label>
+      <label style="display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer;"><input type="checkbox" id="nv_phos" style="width:18px;height:18px;accent-color:var(--gold);"> Phosphate Treatment</label>
+    </div>
+    <div class="field" style="margin-bottom:10px;">
+      <label class="lbl">Parts / Equipment Needed</label>
+      <input type="text" id="nv_parts" placeholder="e.g. robot bag, skimmer basket">
+    </div>
+    <div class="field">
+      <label class="lbl">Other Notes for Next Visit</label>
+      <input type="text" id="nv_other" placeholder="Anything else...">
+    </div>
   </div>
   <div class="card">
     <div class="card-title">📸 Photos</div>
@@ -377,6 +400,12 @@ function loadCustomer() {
           if(f.val) { const el=document.getElementById(f.id); el.value=f.val; el.classList.add('prefilled'); }
         });
         document.getElementById('prefillNote').style.display='block';
+      }
+      if (last && last.next_visit_notes) {
+        document.getElementById('nextVisitReminderText').textContent = last.next_visit_notes;
+        document.getElementById('nextVisitReminder').style.display='block';
+      } else {
+        document.getElementById('nextVisitReminder').style.display='none';
       }
     })
     .catch(() => hideLoading());
@@ -544,6 +573,23 @@ function updateBadge(key, val) {
   else                               { cls = 'high'; txt = r.labels[2]; }
   badge.className = 'range-badge show ' + cls;
   badge.textContent = txt;
+}
+
+function buildNextVisitNotes_() {
+  const checks = [
+    ['nv_tabs', 'Tabs'],
+    ['nv_cya', 'CYA'],
+    ['nv_bicarb', 'Bicarb'],
+    ['nv_calcium', 'Calcium'],
+    ['nv_salt', 'Salt'],
+    ['nv_phos', 'Phosphate Treatment'],
+  ];
+  const items = checks.filter(([id]) => document.getElementById(id).checked).map(([,label]) => label);
+  const parts = document.getElementById('nv_parts').value.trim();
+  const other = document.getElementById('nv_other').value.trim();
+  if (parts) items.push('Parts: ' + parts);
+  if (other) items.push(other);
+  return items.join(', ');
 }
 
 function setChlorineMethod(method) {
@@ -763,6 +809,7 @@ function submitReport(e) {
   payload.append('lsi_score',      lsiVal);
   payload.append('tasks_done',     checkedTasks);
   payload.append('notes',          document.getElementById('techNotes').value);
+  payload.append('next_visit_notes', buildNextVisitNotes_());
   payload.append('chemicals',      JSON.stringify(chemsAdded));
   payload.append('photos',         photoBase64s.length+' photos attached');
   payload.append('photos_data',    JSON.stringify(photoBase64s));
@@ -796,7 +843,11 @@ function resetForm() {
   document.getElementById('custCard').classList.remove('show');
   document.getElementById('photoPreview').innerHTML='';
   document.getElementById('prefillNote').style.display='none';
+  document.getElementById('nextVisitReminder').style.display='none';
   document.querySelectorAll('.prefilled').forEach(el=>el.classList.remove('prefilled'));
+  ['nv_tabs','nv_cya','nv_bicarb','nv_calcium','nv_salt','nv_phos'].forEach(id=>{ document.getElementById(id).checked=false; });
+  document.getElementById('nv_parts').value='';
+  document.getElementById('nv_other').value='';
   photoFiles=[];photoBase64s=[];selectedCustomer=null;doses=[];chlorineMethod='liquid';
   document.getElementById('submitBtn').disabled=false;
   document.getElementById('serviceDate').value=new Date().toISOString().split('T')[0];

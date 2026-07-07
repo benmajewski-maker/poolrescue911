@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <title>Next Visit | EDPR</title>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --navy:#0c1a2c;--navy2:#152236;--gold:#c8a548;--gold2:#e2c06a;
+      --muted:#8a9db5;--border:rgba(200,165,72,0.22);--ibg:rgba(255,255,255,0.06);
+      --success:#4caf7d;--danger:#cf4444;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{background:var(--navy);color:#fff;font-family:'Inter',sans-serif;min-height:100vh;padding-bottom:60px;}
+    header{background:#0a1420;border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10;}
+    .logo{width:38px;height:38px;background:var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Oswald',sans-serif;font-size:12px;font-weight:700;color:var(--navy);flex-shrink:0;}
+    .htext h1{font-family:'Oswald',sans-serif;font-size:16px;font-weight:600;letter-spacing:.04em;}
+    .htext p{font-size:10px;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-top:1px;}
+    .container{padding:16px;max-width:700px;margin:0 auto;}
+    .card{background:var(--navy2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;}
+    .cust-name{font-family:'Oswald',sans-serif;font-size:16px;font-weight:600;margin-bottom:6px;}
+    .cust-date{font-size:11px;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.07em;}
+    .notes{font-size:14px;line-height:1.7;color:#fff;}
+    .tag{display:inline-block;background:rgba(200,165,72,.15);border:1px solid rgba(200,165,72,.3);color:var(--gold);font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;margin:3px 4px 3px 0;}
+    .loading{text-align:center;color:var(--muted);padding:40px;}
+    .empty{text-align:center;color:var(--success);padding:40px;font-size:15px;}
+    .err{color:var(--danger);font-size:13px;text-align:center;padding:30px;}
+    h2{font-family:'Oswald',sans-serif;font-size:18px;color:var(--gold);letter-spacing:.05em;margin-bottom:16px;}
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">EDPR</div>
+  <div class="htext">
+    <h1>El Dorado Pool Rescue</h1>
+    <p>Next Visit Needs</p>
+  </div>
+</header>
+
+<div class="container">
+  <h2>Before You Leave</h2>
+  <div id="list" class="loading">Loading...</div>
+</div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzykkds2D6z2FSi3ePO1_IynoEoOVDguJPhhsYneT446SCp2zcCt76IB2L4gHpBJCs/exec';
+
+function getPasscode() {
+  return sessionStorage.getItem('edpr_passcode') || '';
+}
+
+window.onload = load;
+
+function load() {
+  let passcode = getPasscode();
+  if (!passcode) {
+    passcode = window.prompt('Enter passcode:') || '';
+    sessionStorage.setItem('edpr_passcode', passcode);
+  }
+
+  fetch(SCRIPT_URL + '?action=getNextVisitSummary&passcode=' + encodeURIComponent(passcode))
+    .then(r => r.json())
+    .then(data => {
+      const list = document.getElementById('list');
+      if (data.error) {
+        if (data.error === 'Invalid passcode.') sessionStorage.removeItem('edpr_passcode');
+        list.innerHTML = `<p class="err">${data.error}</p>`;
+        return;
+      }
+      if (!data.length) {
+        list.innerHTML = '<p class="empty">✅ Nothing flagged for any pool — you\'re all set!</p>';
+        return;
+      }
+      list.className = '';
+      list.innerHTML = '';
+      data.forEach(c => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        const items = c.next_visit_notes.split(',').map(s => s.trim()).filter(Boolean);
+        const tags = items.map(i => `<span class="tag">${i}</span>`).join('');
+        card.innerHTML = `
+          <div class="cust-name">${c.name}</div>
+          <div class="cust-date">Last visit: ${c.date}</div>
+          <div class="notes">${tags}</div>`;
+        list.appendChild(card);
+      });
+    })
+    .catch(() => {
+      document.getElementById('list').innerHTML = '<p class="err">Could not load data.</p>';
+    });
+}
+</script>
+</body>
+</html>
