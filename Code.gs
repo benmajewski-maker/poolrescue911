@@ -73,6 +73,13 @@ function doGet(e) {
     return jsonResponse_(getLastReadings_(e.parameter.customer));
   }
 
+  if (action === 'getNextVisitSummary') {
+    if (!checkPasscode_(e.parameter.passcode)) {
+      return jsonResponse_({ error: 'Invalid passcode.' });
+    }
+    return jsonResponse_(getNextVisitSummary_());
+  }
+
   if (action === 'getInvoiceData') {
     if (!checkPasscode_(e.parameter.passcode)) {
       return jsonResponse_({ error: 'Invalid passcode.' });
@@ -153,8 +160,34 @@ function getLastReadings_(customerName) {
     salt: last['Salt'],
     temp: last['Temp'],
     lsi: last['LSI Score'],
-    notes: last['Tech Notes'] || ''
+    notes: last['Tech Notes'] || '',
+    next_visit_notes: last['Next Visit Notes'] || ''
   };
+}
+
+// ── Next visit summary (all customers) ───────────────────────
+
+function getNextVisitSummary_() {
+  const ss = getSpreadsheet_();
+  const sheet = getSheetByNames_(ss, SERVICE_REPORTS_SHEET_NAMES);
+  if (!sheet) return [];
+
+  const rows = sheetToObjects_(sheet);
+
+  // Get most recent row per customer
+  const latestByCustomer = {};
+  rows.forEach(r => {
+    const name = String(r['Customer Name'] || '').trim();
+    if (name) latestByCustomer[name] = r;
+  });
+
+  return Object.entries(latestByCustomer)
+    .map(([name, row]) => ({
+      name,
+      date: row['Date'] || '',
+      next_visit_notes: row['Next Visit Notes'] || ''
+    }))
+    .filter(c => c.next_visit_notes);
 }
 
 // ── Append a new service report row ───────────────────────────
@@ -187,6 +220,7 @@ function appendServiceReport_(params) {
     'LSI Score': params.lsi_score || '',
     'Custom Tasks Done': params.tasks_done || '',
     'Tech Notes': params.notes || '',
+    'Next Visit Notes': params.next_visit_notes || '',
     'Photos': params.photos || ''
   };
 
