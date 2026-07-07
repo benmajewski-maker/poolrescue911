@@ -815,7 +815,7 @@ function submitReport(e) {
   payload.append('photos_data',    JSON.stringify(photoBase64s));
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(()=>controller.abort(), 45000);
+  const timeoutId = setTimeout(()=>controller.abort(), 90000);
 
   fetch(SCRIPT_URL,{method:'POST',body:payload,signal:controller.signal})
     .then(r=>r.json())
@@ -827,11 +827,22 @@ function submitReport(e) {
       document.getElementById('successMsg').textContent=`Report logged and email sent to ${selectedCustomer.email}.`;
       document.getElementById('successScreen').classList.add('show');
     })
-    .catch(()=>{
+    .catch(err=>{
       clearTimeout(timeoutId);
       hideLoading();
-      document.getElementById('submitBtn').disabled=false;
-      alert('Report could not be sent — check your connection and tap Send again.');
+      if (err && err.name === 'AbortError') {
+        document.getElementById('loadingMsg').textContent = 'Still sending... please wait.';
+        document.getElementById('loadingOverlay').classList.add('show');
+        // Wait another 60s in case the server is still processing
+        setTimeout(()=>{
+          hideLoading();
+          document.getElementById('submitBtn').disabled=false;
+          alert('Report timed out. Check your connection and tap Send again — if you have signal, try once more.');
+        }, 60000);
+      } else {
+        document.getElementById('submitBtn').disabled=false;
+        alert('Report could not be sent — check your connection and tap Send again.');
+      }
     });
 }
 
